@@ -1,7 +1,7 @@
 import { ItemView, Notice, TFile, WorkspaceLeaf } from 'obsidian'
 import { VIEW_TYPE_GRAPH_ANALYSIS_VISUAL } from 'src/Constants'
 import GraphVisual from 'src/Components/GraphVisual.svelte'
-import { getGapCandidates, getNeighbourhood } from 'src/GraphVisualData'
+import { getGapCandidates, getHop2Nodes, getNeighbourhood } from 'src/GraphVisualData'
 import type GraphAnalysisPlugin from 'src/main'
 
 export default class GraphVisualView extends ItemView {
@@ -83,6 +83,22 @@ export default class GraphVisualView extends ItemView {
     const { neighbourhood, ccMap } = await getNeighbourhood(this.plugin, this.focalPath)
     if (seq !== this.drawSeq) return
 
+    // hop-2 is pure graph traversal — fast enough to load eagerly so the toggle
+    // in the controls panel can flip visibility without a component remount.
+    // hop1Seen excludes all hop-1 nodes from hop-2 results (prevents duplicates).
+    // hop1DirectSources is the expansion set — Jaccard/CC nodes are excluded per spec D1
+    // (chaining inference on inference degrades signal quality).
+    const hop1Seen = new Set<string>([
+      this.focalPath,
+      ...neighbourhood.nodes.map((n) => n.path),
+    ])
+    const hop1DirectSources = new Set<string>(
+      neighbourhood.nodes
+        .filter(n => n.edgeType === 'direct' && n.path !== this.focalPath)
+        .map(n => n.path)
+    )
+    const hop2Neighbourhood = getHop2Nodes(this.plugin, this.focalPath, hop1Seen, hop1DirectSources, 1, 50)
+
     contentEl.empty()
 
     const onNodeClick = (path: string, context: string) => {
@@ -99,9 +115,10 @@ export default class GraphVisualView extends ItemView {
       target: contentEl,
       props: {
         neighbourhood,
+        hop2Neighbourhood,
         focalPath: this.focalPath,
         gaps: [],
-        hubThreshold: this.plugin.settings.hubDegreeThreshold,
+        hubThresholdDefault: this.plugin.settings.hubDegreeThreshold,
         onNodeClick,
       },
     })

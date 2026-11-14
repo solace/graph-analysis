@@ -8,6 +8,10 @@
   export let chargeStrength = -200
   export let linkDistance = 80
   export let scoreThreshold = 0
+  export let hopDepth: 1 | 2 = 1
+  export let hubThreshold = 20
+  export let hop2MinDegree = 1
+  export let hop2NodeCap = 30
 
   const dispatch = createEventDispatcher()
   let expanded = true
@@ -52,6 +56,34 @@
       </div>
 
       <div class="GA-controls-section">
+        <span class="GA-controls-label">Depth</span>
+        <div class="GA-hop-toggle">
+          <button
+            class="GA-hop-btn"
+            class:active={hopDepth === 1}
+            on:click={() => (hopDepth = 1)}
+          >1-hop</button>
+          <button
+            class="GA-hop-btn"
+            class:active={hopDepth === 2}
+            on:click={() => (hopDepth = 2)}
+          >2-hop</button>
+        </div>
+        {#if hopDepth === 2}
+          <label class="GA-slider-row">
+            <span>Min degree</span>
+            <input type="range" min="1" max="50" step="1" bind:value={hop2MinDegree} />
+            <span class="GA-slider-val">{hop2MinDegree}</span>
+          </label>
+          <label class="GA-slider-row">
+            <span>Max nodes</span>
+            <input type="range" min="1" max="50" step="1" bind:value={hop2NodeCap} />
+            <span class="GA-slider-val">{hop2NodeCap}</span>
+          </label>
+        {/if}
+      </div>
+
+      <div class="GA-controls-section">
         <span class="GA-controls-label">Nodes</span>
         <div class="GA-node-legend-row">
           <span class="GA-node-icon GA-node-focal" />
@@ -89,6 +121,11 @@
           <span>Min Jaccard</span>
           <input type="range" min="0" max="1" step="0.05" bind:value={scoreThreshold} />
           <span class="GA-slider-val">{scoreThreshold.toFixed(2)}</span>
+        </label>
+        <label class="GA-slider-row">
+          <span>Hub degree</span>
+          <input type="range" min="1" max="200" step="1" bind:value={hubThreshold} />
+          <span class="GA-slider-val">{hubThreshold}</span>
         </label>
       </div>
 
@@ -265,6 +302,32 @@
     border-bottom-color: transparent;
     opacity: 0.7;
     transform: rotate(-45deg);
+  }
+
+  /* Hop depth toggle */
+  .GA-hop-toggle {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 2px;
+  }
+
+  .GA-hop-btn {
+    all: unset;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: var(--text-muted);
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+  }
+
+  .GA-hop-btn:hover { color: var(--text-normal); }
+
+  .GA-hop-btn.active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
   }
 
   /* Sliders */

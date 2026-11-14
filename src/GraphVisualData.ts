@@ -87,6 +87,63 @@ export async function getGapCandidates(
   return candidates.slice(0, gapNodeCount)
 }
 
+export function getHop2Nodes(
+  plugin: GraphAnalysisPlugin,
+  focalPath: string,
+  hop1Seen: Set<string>,        // all hop-1 nodes — used for exclusion only
+  hop1DirectSources: Set<string>, // direct wikilink neighbours only — iterated for expansion
+  minDegree: number,
+  nodeCap: number
+): NeighbourhoodResult {
+  if (!plugin.g || !plugin.g.hasNode(focalPath)) return { nodes: [], edges: [] }
+
+  const { app } = plugin
+  const { exclusionFolders } = plugin.settings
+
+  const isExcluded = (path: string) =>
+    isExcludedByFolder(path, exclusionFolders) ||
+    isExcludedByProp(path, plugin)
+
+  // candidateMap: path → { inDegree, outDegree, firstHop1Source }
+  // Degree stored here and reused for NodeData to avoid double graph lookups.
+  // A hop-2 node reachable from multiple hop-1 nodes is added once (first source wins).
+  const candidateMap = new Map<string, { inDegree: number; outDegree: number; source: string }>()
+
+  for (const hop1Path of hop1DirectSources) {
+    for (const neighbour of plugin.g.neighbors(hop1Path)) {
+      if (hop1Seen.has(neighbour)) continue
+      if (isExcluded(neighbour)) continue
+      if (candidateMap.has(neighbour)) continue
+      const inDegree = plugin.g.hasNode(neighbour) ? plugin.g.inDegree(neighbour) : 0
+      const outDegree = plugin.g.hasNode(neighbour) ? plugin.g.outDegree(neighbour) : 0
+      candidateMap.set(neighbour, { inDegree, outDegree, source: hop1Path })
+    }
+  }
+
+  const sorted = [...candidateMap.entries()]
+    .filter(([, { inDegree, outDegree }]) => inDegree + outDegree >= minDegree)
+    .sort(([, a], [, b]) => (b.inDegree + b.outDegree) - (a.inDegree + a.outDegree))
+    .slice(0, nodeCap)
+
+  const nodes: NodeData[] = []
+  const edges: EdgeData[] = []
+
+  for (const [path, { inDegree, outDegree, source }] of sorted) {
+    const abstractFile = app.vault.getAbstractFileByPath(path)
+    nodes.push({
+      path,
+      edgeType: 'direct',
+      inDegree,
+      outDegree,
+      fileSize: abstractFile instanceof TFile ? abstractFile.stat.size : 0,
+      hop: 2,
+    })
+    edges.push({ source, target: path, type: 'direct', hop: 2 })
+  }
+
+  return { nodes, edges }
+}
+
 export async function getNeighbourhood(
   plugin: GraphAnalysisPlugin,
   focalPath: string

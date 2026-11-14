@@ -17,6 +17,7 @@
     id: string
     nodeType: 'neighbour' | 'gap'
     edgeType: string
+    hop?: 1 | 2
     inDegree?: number
     outDegree?: number
     fileSize?: number
@@ -29,6 +30,7 @@
     target: string | SimNode
     type: string
     measure: number
+    hop?: 1 | 2
   }
 
   interface Colors {
@@ -72,6 +74,7 @@
       id: n.path,
       edgeType: n.edgeType,
       nodeType: 'neighbour' as const,
+      hop: n.hop,
       inDegree: n.inDegree,
       outDegree: n.outDegree,
       ...getPos(n.path),
@@ -102,6 +105,7 @@
       target: e.target,
       type: e.type,
       measure: e.measure ?? 1,
+      hop: e.hop,
     }))
     for (const g of gaps) {
       links.push({ source: focalPath, target: g.path, type: 'gap', measure: g.aaScore })
@@ -122,6 +126,7 @@
   export let hubThreshold = 20
   export let scoreThreshold = 0
   export let onNodeClick: ((path: string, context: string) => void) | null = null
+  export let reinitTrigger = 0
 
   export function resetView() {
     transform = { x: 0, y: 0, k: 1 }
@@ -140,10 +145,12 @@
   let initialized = false
   let gapsLoaded = false
   let transform = { x: 0, y: 0, k: 1 }
+  let handledReinitTrigger = 0
 
   // ── Reactives ──────────────────────────────────────────────────────
   $: { showDirect; showCoCitation; showJaccard; showGap; scoreThreshold;
        recomputeVisFn?.(); renderFn?.() }
+  $: { hubThreshold; renderFn?.() }
 
   $: if (sim) {
     ;(sim.force('charge') as any)?.strength(chargeStrength)
@@ -154,8 +161,17 @@
     sim.alpha(0.3).restart()
   }
 
+  // gapsLoaded is not reset in reinit() — gaps stay in the prop and initSim()
+  // reads the current prop value each time, so they're included automatically.
   $: if (!gapsLoaded && initialized && gaps.length > 0) {
     gapsLoaded = true
+    reinit()
+  }
+
+  // Reinit when hop depth or hop-2 filters change (neighbourhood prop already updated
+  // by this point — Svelte batches all prop updates before child reactives run).
+  $: if (initialized && reinitTrigger > 0 && reinitTrigger !== handledReinitTrigger) {
+    handledReinitTrigger = reinitTrigger
     reinit()
   }
 
@@ -223,10 +239,12 @@
     }
 
     function nodeRadius(n: SimNode): number {
-      if (n.id === focalPath) return 12
-      if (n.nodeType === 'gap') return 9
-      if (isHubNode(n)) return 10
-      return 7
+      let r: number
+      if (n.id === focalPath) r = 12
+      else if (n.nodeType === 'gap') r = 9
+      else if (isHubNode(n)) r = 10
+      else r = 7
+      return n.hop === 2 ? r * 0.7 : r
     }
 
     // scoreThreshold applies only to Jaccard (0–1 range). CC and gap edges
@@ -296,23 +314,24 @@
         if (typeof s !== 'object' || typeof t !== 'object') continue
 
         ctx.save()
+        const hopFade = l.hop === 2 ? 0.65 : 1
         if (l.type === 'direct') {
-          ctx.globalAlpha = 0.6
+          ctx.globalAlpha = 0.6 * hopFade
           ctx.lineWidth = 1.5
           ctx.setLineDash([])
           ctx.strokeStyle = col.direct
         } else if (l.type === 'jaccard') {
-          ctx.globalAlpha = Math.min(0.9, 0.3 + l.measure * 0.4)
+          ctx.globalAlpha = Math.min(0.9, 0.3 + l.measure * 0.4) * hopFade
           ctx.lineWidth = 1
           ctx.setLineDash([6, 3])
           ctx.strokeStyle = col.accent
         } else if (l.type === 'cocitation') {
-          ctx.globalAlpha = Math.min(0.9, 0.3 + l.measure * 0.2)
+          ctx.globalAlpha = Math.min(0.9, 0.3 + l.measure * 0.2) * hopFade
           ctx.lineWidth = 1
           ctx.setLineDash([2, 4])
           ctx.strokeStyle = col.cc
         } else {
-          ctx.globalAlpha = 0.2
+          ctx.globalAlpha = 0.2 * hopFade
           ctx.lineWidth = 1
           ctx.setLineDash([3, 5])
           ctx.strokeStyle = col.accent
@@ -336,8 +355,9 @@
           : n.edgeType === 'cocitation' ? col.cc
           : col.node
 
+        const hopFade = n.hop === 2 ? 0.65 : 1
         ctx.save()
-        ctx.globalAlpha = isFocal ? 1 : 0.85
+        ctx.globalAlpha = (isFocal ? 1 : 0.85) * hopFade
         ctx.beginPath()
         ctx.arc(n.x ?? W / 2, n.y ?? H / 2, r, 0, Math.PI * 2)
         ctx.fillStyle = fill
@@ -346,7 +366,7 @@
 
         if (isHubNode(n)) {
           ctx.save()
-          ctx.globalAlpha = 0.8
+          ctx.globalAlpha = 0.8 * hopFade
           ctx.lineWidth = 2
           ctx.setLineDash([])
           ctx.strokeStyle = col.hub
@@ -400,7 +420,8 @@
         const label = noteName(n.id)
         const ty = y + r + 12
 
-        ctx.globalAlpha = isFocal ? 1 : 0.75
+        const hopFade = (n as SimNode).hop === 2 ? 0.65 : 1
+        ctx.globalAlpha = (isFocal ? 1 : 0.75) * hopFade
         ctx.lineWidth = 3
         ctx.strokeStyle = col.bg
         ctx.strokeText(label, x, ty)

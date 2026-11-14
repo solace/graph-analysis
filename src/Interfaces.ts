@@ -97,6 +97,7 @@ export interface NodeData {
   inDegree: number
   outDegree: number
   fileSize: number
+  hop?: 1 | 2
 }
 
 export interface EdgeData {
@@ -104,6 +105,7 @@ export interface EdgeData {
   target: string
   type: VisualEdgeType
   measure?: number
+  hop?: 1 | 2
 }
 
 export interface NeighbourhoodResult {
