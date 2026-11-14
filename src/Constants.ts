@@ -19,11 +19,18 @@ export const DEFAULT_SETTINGS: GraphAnalysisSettings = {
     'Co-Citations',
     'Label Propagation',
   ],
+  exclusionFolders: [],
+  exclusionProps: [],
+  gapNodeFloor: 0.1,
+  gapNodeCount: 10,
+  hubDegreeThreshold: 20,
 }
 
 export const DECIMALS = 4
 
-export const VIEW_TYPE_GRAPH_ANALYSIS = 'graph-analysis'
+export const PLUGIN_NAME = 'Visual Graph Analysis'
+export const VIEW_TYPE_GRAPH_ANALYSIS = 'visual-graph-analysis'
+export const VIEW_TYPE_GRAPH_ANALYSIS_VISUAL = 'visual-graph-analysis-visual'
 
 export const LINKED = 'GA-linked'
 export const NOT_LINKED = 'GA-not-linked'

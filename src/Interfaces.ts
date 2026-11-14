@@ -1,6 +1,6 @@
 import type { TFile } from 'obsidian'
 import type { Bow, Document, WinkMethods } from 'wink-nlp'
-import { ReferenceCache } from 'obsidian'
+import type { ReferenceCache } from 'obsidian'
 
 export interface ResolvedLinks {
   [from: string]: {
@@ -89,6 +89,42 @@ export interface LineSentences {
 
 export type AnalysisAlg<T> = (a: string, options?: {}) => Promise<T>
 
+export type VisualEdgeType = 'direct' | 'cocitation' | 'jaccard' | 'gap'
+
+export interface NodeData {
+  path: string
+  edgeType: VisualEdgeType
+  inDegree: number
+  outDegree: number
+  fileSize: number
+}
+
+export interface EdgeData {
+  source: string
+  target: string
+  type: VisualEdgeType
+  measure?: number
+}
+
+export interface NeighbourhoodResult {
+  nodes: NodeData[]
+  edges: EdgeData[]
+}
+
+export interface GapCandidate {
+  path: string
+  aaScore: number
+  coCitations: CoCitation[]
+  fileSize: number
+  inDegree: number
+  outDegree: number
+}
+
+export interface ExclusionProp {
+  key: string
+  value: string
+}
+
 export interface GraphAnalysisSettings {
   noInfinity: boolean
   noZero: boolean
@@ -102,6 +138,11 @@ export interface GraphAnalysisSettings {
   exclusionRegex: string
   exclusionTags: string[]
   algsToShow: Subtype[]
+  exclusionFolders: string[]
+  exclusionProps: ExclusionProp[]
+  gapNodeFloor: number
+  gapNodeCount: number
+  hubDegreeThreshold: number
 }
 
 export interface NLPPlugin {

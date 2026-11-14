@@ -3,7 +3,7 @@
   import { hoverPreview, isInVault, isLinked } from 'obsidian-community-lib'
   import type AnalysisView from 'src/AnalysisView'
   import { ANALYSIS_TYPES, ICON, LINKED, NOT_LINKED } from 'src/Constants'
-  import type { GraphAnalysisSettings, Subtype } from 'src/Interfaces'
+  import type { Subtype } from 'src/Interfaces'
   import type GraphAnalysisPlugin from 'src/main'
   import {
     classExt,
@@ -23,9 +23,10 @@
 
   export let app: App
   export let plugin: GraphAnalysisPlugin
-  export let settings: GraphAnalysisSettings
   export let view: AnalysisView
   export let currSubtype: Subtype
+
+  $: viewEl = view as any
 
   $: currSubtypeInfo = ANALYSIS_TYPES.find((sub) => sub.subtype === currSubtype)
   let frozen = false
@@ -152,7 +153,7 @@
             >
               <span
                 on:contextmenu={(e) => openMenu(e, app)}
-                on:mouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
+                on:mouseover={(e) => hoverPreview(e, viewEl, dropPath(node.to))}
               >
                 {#if node.linked}
                   <span class={ICON}>

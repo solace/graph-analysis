@@ -43,8 +43,10 @@ export default class MyGraph extends Graph {
 
   async initGraph(): Promise<MyGraph> {
     const { resolvedLinks, unresolvedLinks } = this.app.metadataCache
-    const { exclusionRegex, exclusionTags, allFileExtensions, addUnresolved } =
-      this.settings
+    const {
+      exclusionRegex, exclusionTags, allFileExtensions, addUnresolved,
+      exclusionFolders, exclusionProps,
+    } = this.settings
     const regex = new RegExp(exclusionRegex, 'i')
     let i = 0
 
@@ -56,12 +58,31 @@ export default class MyGraph extends Graph {
       exclusionRegex === '' || !regex.test(node)
     const includeExt = (node: string) =>
       allFileExtensions || node.endsWith('md')
+    const includeFolder = (node: string) =>
+      exclusionFolders.length === 0 ||
+      !exclusionFolders.some((f) =>
+        node.startsWith(f.replace(/\/$/, '') + '/')
+      )
+    const includeProp = (node: string) => {
+      if (exclusionProps.length === 0) return true
+      const cache = this.app.metadataCache.getCache(node)
+      if (!cache?.frontmatter) return true
+      return !exclusionProps.some(({ key, value }) => {
+        const fmVal = cache.frontmatter[key]
+        if (fmVal == null) return false
+        const vals = Array.isArray(fmVal) ? fmVal.map(String) : [String(fmVal)]
+        return vals.includes(value)
+      })
+    }
+    const include = (node: string, tags?: string[]) =>
+      includeTag(tags) && includeRegex(node) && includeExt(node) &&
+      includeFolder(node) && includeProp(node)
 
     for (const source in resolvedLinks) {
       const sourceCache = this.app.metadataCache.getCache(source)
       // Remove duplicate tags if a tag shows up multiple times within a file
       const sourceTags = uniqueArray(getAllTags(sourceCache));
-      if (includeTag(sourceTags) && includeRegex(source) && includeExt(source)) {
+      if (include(source, sourceTags)) {
         if (!this.hasNode(source)) {
           this.addNode(source, { i })
           i++
@@ -71,7 +92,7 @@ export default class MyGraph extends Graph {
           const destCache = this.app.metadataCache.getCache(dest)
           // Remove duplicate tags if a tag shows up multiple times within a file
           const destTags = uniqueArray(getAllTags(destCache));
-          if (includeTag(destTags) && includeRegex(dest) && includeExt(dest)) {
+          if (include(dest, destTags)) {
             if (!this.hasNode(dest)) {
               this.addNode(dest, { i })
               i++
@@ -85,7 +106,7 @@ export default class MyGraph extends Graph {
           // the notes), so we can take a shortcut here
           for (const dest in unresolvedLinks[source]) {
             const destMD = dest + '.md'
-            if (includeRegex(destMD)) {
+            if (includeRegex(destMD) && includeFolder(destMD)) {
               if (!this.hasNode(destMD)) {
                 this.addNode(destMD, { i })
                 i++

@@ -5,7 +5,6 @@
   import { ANALYSIS_TYPES, ICON, MEASURE, NODE } from 'src/Constants'
   import type {
     Communities,
-    GraphAnalysisSettings,
     Subtype,
   } from 'src/Interfaces'
   import type GraphAnalysisPlugin from 'src/main'
@@ -28,9 +27,10 @@
 
   export let app: App
   export let plugin: GraphAnalysisPlugin
-  export let settings: GraphAnalysisSettings
   export let view: AnalysisView
   export let currSubtype: Subtype
+
+  $: viewEl = view as any
 
   interface ComponentResults {
     label: string
@@ -172,7 +172,7 @@
                     {classExt(member)}
                       "
                     on:click={async (e) => await openOrSwitch(app, member, e)}
-                    on:mouseover={(e) => hoverPreview(e, view, member)}
+                    on:mouseover={(e) => hoverPreview(e, viewEl, member)}
                   >
                     {#if isLinked(resolvedLinks, comm.label, member, false)}
                       <span class={ICON}>

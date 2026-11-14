@@ -88,9 +88,6 @@ body.is-mobile .GA-details::before {
 .scrollContainer {
   padding: 0px 0px 4px 0px;
 }
-.scrollContainer:hover {
-  padding: 0px;
-}
 
 .GA-View .scrollContainer:hover ::-webkit-scrollbar {
   height: 4px;

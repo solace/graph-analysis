@@ -10,12 +10,13 @@
     "allowJs": true,
     "checkJs": false,
     "noImplicitAny": true,
+    "skipLibCheck": true,
     "moduleResolution": "node",
     "importHelpers": true,
     "lib": ["dom", "es5", "scripthost", "es2019"],
     "types": ["node", "svelte"],
     "paths": {
-      "src": ["src/*"]
+      "src/*": ["src/*"]
     }
   },
   "include": ["src/**/*", "src/*", "**/*.ts"],

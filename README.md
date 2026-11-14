@@ -1,11 +1,17 @@
 # Graph Analysis
 
-Graph analysis adds the **analysis view** to Obsidian which implements a set of
-algorithms that computes useful relations between the notes in your vault! Our
-flagship algorithm is the **Co-citations** panel, that we describe as a _2nd
-order backlinks panel_.
+> **Fork notice:** This is a fork of [SkepticMystic/graph-analysis](https://github.com/SkepticMystic/graph-analysis) with an added [Visual Graph](#visual-graph) — a D3-force canvas view of the inferred reasoning neighbourhood of your active note. All original analysis algorithms are unchanged.
+> 
+> Support this fork: [![Support this fork on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/micheleong)
 
-The Graph Analysis view shows a table of note names and numbers, each
+Graph analysis adds two views to Obsidian:
+
+- **Analysis view** — a table of algorithm scores between the current note and every other note in your vault
+- **Visual graph** — a D3-force canvas showing the inferred reasoning neighbourhood of the current note ([jump to Visual Graph docs](#visual-graph))
+
+Our flagship algorithm is the **Co-citations** panel, described as a _2nd order backlinks panel_.
+
+The Analysis view shows a table of note names and numbers, each
 representing the value of some graph analysis algorithm on that note in relation
 to the current note.
 
@@ -175,7 +181,62 @@ implement a variation of
 [Co-citatition Proximity Analysis](https://en.wikipedia.org/wiki/Co-citation_Proximity_Analysis).
 
 
-## Buy Us a Coffee
+## Visual Graph
+
+The visual graph opens as a separate right-sidebar pane and tracks your active note automatically. Open it via the command palette: **Open Visual Graph View**.
+
+<!-- screenshot: visual graph pane showing a focal note with direct, Jaccard, co-citation, and gap edges -->
+
+### Edge types
+
+The graph renders four distinct edge types simultaneously:
+
+| Type | Style | Meaning |
+|------|-------|---------|
+| **Direct** | Solid, muted | Explicit wikilink to or from the focal note |
+| **Jaccard** | Dashed accent | Structurally similar (shared neighbours), not directly linked |
+| **Co-citation** | Short-dash orange | Co-cited together in another note, not directly linked |
+| **Gap** | Ghost dashed | Adamic-Adar candidate — algorithmically likely connection, no link yet |
+
+### Node types
+
+- **Focal note** — large accent circle at centre
+- **Wikilink neighbour** — solid circle, theme colour
+- **Hub** — amber ring around nodes above the degree threshold
+- **Jaccard / co-citation neighbour** — accent or orange fill
+- **Gap candidate** — dashed ghost circle. The inner arc shows the note's development level (file size proxy: none → ¼ → ½ → ¾ → full). Clicking opens the note and shows the top co-citation sentence explaining why it appeared.
+
+<!-- screenshot: gap node with development arc, label visible -->
+
+### Controls panel
+
+The controls panel sits above the canvas. Toggle it with **▾ Filters**.
+
+- **Edges** — toggle each edge type on/off independently
+- **Nodes** — visual legend
+- **Min Jaccard** — slider (0–1) filtering Jaccard edges below the threshold; co-citation and gap edges are not affected
+- **Forces** — Repulsion and Link distance sliders
+- **⌖** — Reset pan and zoom
+
+Scroll wheel zooms toward cursor. Drag empty space to pan. Drag a node to reposition it.
+
+### Settings
+
+Under **Settings → Graph Analysis → Visual Graph**:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Exclusion Folders | _(empty)_ | Comma-separated paths. Notes in these folders are hidden from the graph. E.g. `dailies, templates/system` |
+| Exclusion Properties | _(empty)_ | Comma-separated `key:value` pairs matching frontmatter. E.g. `type:moc`. Array-valued YAML properties are supported. |
+| Gap Node Score Floor | 0.1 | Minimum score for unlinked Jaccard/co-citation neighbours and gap candidates. Higher values show fewer, stronger results. |
+| Gap Node Count | 10 | Maximum number of gap candidates and unlinked neighbours per algorithm (1–50). |
+| Hub Degree Threshold | 20 | Total degree (in + out) at or above which a node is rendered as a hub. |
+
+Changes to any Visual Graph setting redraw the open view immediately.
+
+## Upstream Foundation & Credits
+
+[Graph Analysis](https://github.com/SkepticMystic/graph-analysis) was originally created by SkepticMystic and Emile.
 
 SkepticMystic: [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/G2G454TZF)
 

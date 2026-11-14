@@ -12,3 +12,7 @@ main.js
 
 # obsidian
 data.json
+
+# local task/planning notes — vault-specific, not for public repo
+docs/ideas/
+docs/tasks/

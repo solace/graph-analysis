@@ -1,6 +1,6 @@
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian'
 import { ANALYSIS_TYPES } from 'src/Constants'
-import type { Subtype } from 'src/Interfaces'
+import type { ExclusionProp, Subtype } from 'src/Interfaces'
 import type GraphAnalysisPlugin from 'src/main'
 import Checkboxes from './Components/Checkboxes.svelte'
 
@@ -26,7 +26,7 @@ export class SampleSettingTab extends PluginSettingTab {
       .setDesc('Which analysis type to show on startup')
       .addDropdown((dd) => {
         dd.setValue(settings.defaultSubtypeType)
-        const dict = {}
+        const dict: Record<string, string> = {}
         settings.algsToShow.forEach((subtype) => {
           dict[subtype] = subtype
         })
@@ -170,6 +170,106 @@ export class SampleSettingTab extends PluginSettingTab {
           }
         }
       })
+
+    containerEl.createEl('h3', { text: 'Visual Graph' })
+
+    new Setting(containerEl)
+      .setName('Exclusion Folders')
+      .setDesc(
+        'Comma-separated folder paths. Notes under these folders are excluded from the visual graph. E.g. dailies, templates/system'
+      )
+      .addText((tc) => {
+        tc.setValue(settings.exclusionFolders.join(', '))
+        tc.inputEl.style.width = '100%'
+        tc.inputEl.onblur = async () => {
+          const { value } = tc.inputEl
+          settings.exclusionFolders =
+            value === ''
+              ? []
+              : value
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+          await plugin.saveSettings()
+        }
+      })
+
+    new Setting(containerEl)
+      .setName('Exclusion Properties')
+      .setDesc(
+        'Comma-separated key:value pairs. Notes with matching frontmatter are excluded from the visual graph. E.g. type:moc, type:classification'
+      )
+      .addText((tc) => {
+        tc.setValue(
+          settings.exclusionProps.map((p) => `${p.key}:${p.value}`).join(', ')
+        )
+        tc.inputEl.style.width = '100%'
+        tc.inputEl.onblur = async () => {
+          const { value } = tc.inputEl
+          settings.exclusionProps =
+            value === ''
+              ? []
+              : (value
+                  .split(',')
+                  .map((s) => {
+                    const trimmed = s.trim()
+                    const colonIdx = trimmed.indexOf(':')
+                    if (colonIdx === -1) return null
+                    return {
+                      key: trimmed.slice(0, colonIdx).trim(),
+                      value: trimmed.slice(colonIdx + 1).trim(),
+                    }
+                  })
+                  .filter(Boolean) as ExclusionProp[])
+          await plugin.saveSettings()
+        }
+      })
+
+    new Setting(containerEl)
+      .setName('Gap Node Score Floor')
+      .setDesc(
+        'Minimum score for unlinked neighbours and gap candidates. Applies to Jaccard similarity (0–1), co-citation measures, and Adamic-Adar gap ranking. Higher values show fewer, stronger results.'
+      )
+      .addSlider((sl) =>
+        sl
+          .setLimits(0, 1, 0.01)
+          .setValue(settings.gapNodeFloor)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            settings.gapNodeFloor = value
+            await plugin.saveSettings()
+          })
+      )
+
+    new Setting(containerEl)
+      .setName('Gap Node Count')
+      .setDesc('Maximum number of gap candidates to show in the visual graph.')
+      .addSlider((sl) =>
+        sl
+          .setLimits(1, 50, 1)
+          .setValue(settings.gapNodeCount)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            settings.gapNodeCount = value
+            await plugin.saveSettings()
+          })
+      )
+
+    new Setting(containerEl)
+      .setName('Hub Degree Threshold')
+      .setDesc(
+        'Notes with total degree (in + out links) at or above this value are rendered as hub nodes in the visual graph.'
+      )
+      .addSlider((sl) =>
+        sl
+          .setLimits(1, 200, 1)
+          .setValue(settings.hubDegreeThreshold)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            settings.hubDegreeThreshold = value
+            await plugin.saveSettings()
+          })
+      )
 
     containerEl.createEl('h3', { text: 'Debugging Options' })
 
