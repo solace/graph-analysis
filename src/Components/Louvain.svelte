@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { App } from 'obsidian'
-  import { hoverPreview, isInVault, isLinked } from 'obsidian-community-lib'
+  import { hoverPreview, isInVault, isLinked } from 'src/Utility'
   import type AnalysisView from 'src/AnalysisView'
   import { ANALYSIS_TYPES, ICON, LINKED, NOT_LINKED } from 'src/Constants'
   import type { Subtype } from 'src/Interfaces'

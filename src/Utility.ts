@@ -1,19 +1,28 @@
 import {
   App, CacheItem,
-  EditorRange, LinkCache,
+  EditorRange, ItemView, LinkCache,
   MarkdownView,
   Menu,
+  normalizePath,
   Notice, ReferenceCache,
   TFile,
   WorkspaceLeaf,
 } from 'obsidian'
-import {
-  copy,
-  createNewMDNote,
-  isInVault,
-  isLinked,
-  ResolvedLinks,
-} from 'obsidian-community-lib'
+
+export type ResolvedLinks = Record<string, Record<string, number>>
+
+export const isInVault = (app: App, noteName: string, sourcePath = ''): boolean =>
+  !!app.metadataCache.getFirstLinkpathDest(noteName, sourcePath)
+
+export function isLinked(resolvedLinks: ResolvedLinks, from: string, to: string, directed = true): boolean {
+  const addMD = (n: string) => (n.endsWith('.md') ? n : n + '.md')
+  const f = addMD(from)
+  const t = addMD(to)
+  if (resolvedLinks[f]?.hasOwnProperty(t)) return true
+  if (!directed && resolvedLinks[t]?.hasOwnProperty(f)) return true
+  return false
+}
+
 import type AnalysisView from 'src/AnalysisView'
 import { DECIMALS, IMG_EXTENSIONS, LINKED, NOT_LINKED } from 'src/Constants'
 import type {
@@ -58,7 +67,7 @@ export const getExt = (path: string) => path.split('.').last()
 
 export const classExt = (path: string) => `GA-${getExt(path)}`
 export const classResolved = (app: App, node: string) =>
-  node.endsWith('.md') && !isInVault(app, dropExt(node)) ? 'is-unresolved' : ''
+  node.endsWith('.md') && !isInVault(dropExt(node)) ? 'is-unresolved' : ''
 export const classLinked = (
   resolvedLinks: ResolvedLinks,
   from: string,
@@ -72,17 +81,15 @@ export const nxnArray = (n: number): undefined[][] =>
   [...Array(n)].map((e) => Array(n))
 
 export function hoverPreview(
-  event: MouseEvent,
-  view: AnalysisView,
+  event: MouseEvent | FocusEvent,
+  view: { app: App; getViewType(): string },
   to: string
 ): void {
-  const targetEl = event.target as HTMLElement
-
   view.app.workspace.trigger('hover-link', {
     event,
     source: view.getViewType(),
     hoverParent: view,
-    targetEl,
+    targetEl: event.target as HTMLElement,
     linktext: to,
   })
 }
@@ -148,7 +155,7 @@ export function openMenu(
   copyObj: { toCopy: string } = undefined
 ) {
   const tdEl = event.target
-  const menu = new Menu(app)
+  const menu = new Menu()
 
   if (copyObj) {
     menu.addItem((item) =>
@@ -156,7 +163,9 @@ export function openMenu(
         .setTitle('Copy community')
         .setIcon('graph')
         .onClick(async () => {
-          await copy(copyObj.toCopy)
+          await navigator.clipboard.writeText(copyObj.toCopy)
+            .then(() => new Notice('Copied to clipboard'))
+            .catch((r) => { new Notice('Could not copy to clipboard'); console.log(r) })
         })
     )
   } else {
@@ -274,7 +283,7 @@ export function getPromiseResults(
             measure: number
             extra: any
           }
-          const resolved = !to.endsWith('.md') || isInVault(app, to)
+          const resolved = !to.endsWith('.md') || isInVault(to)
           return {
             measure,
             linked: isLinked(resolvedLinks, currNode, to, false),
@@ -321,7 +330,7 @@ export const isImg = (path: string) =>
 export async function openOrSwitch(
   app: App,
   dest: string,
-  event: MouseEvent,
+  event: MouseEvent | KeyboardEvent,
   options: {
     createNewFile: boolean
   } = { createNewFile: true }
@@ -331,7 +340,10 @@ export async function openOrSwitch(
 
   // If dest doesn't exist, make it
   if (!destFile && options.createNewFile) {
-    destFile = await createNewMDNote(app, dest)
+    const folder = app.fileManager.getNewFileParent('').path
+    const newName = dest.endsWith('.md') ? dest : dest + '.md'
+    const newPath = normalizePath(folder === '/' ? newName : `${folder}/${newName}`)
+    destFile = await app.vault.create(newPath, '')
   } else if (!destFile && !options.createNewFile) return
 
   // Check if it's already open

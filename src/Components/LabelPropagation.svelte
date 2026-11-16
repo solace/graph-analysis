@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { App } from 'obsidian'
-  import { hoverPreview, isLinked } from 'obsidian-community-lib'
+  import { hoverPreview, isLinked } from 'src/Utility'
   import type AnalysisView from 'src/AnalysisView'
   import { ANALYSIS_TYPES, ICON, MEASURE, NODE } from 'src/Constants'
   import type {

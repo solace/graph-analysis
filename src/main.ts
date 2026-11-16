@@ -1,5 +1,6 @@
-import { addIcon, Notice, Plugin, WorkspaceLeaf } from 'obsidian'
-import { openView, wait } from 'obsidian-community-lib'
+import { addIcon, ItemView, Notice, Plugin, WorkspaceLeaf } from 'obsidian'
+
+const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 import AnalysisView from 'src/AnalysisView'
 import {
   PLUGIN_NAME,
@@ -36,7 +37,7 @@ export default class GraphAnalysisPlugin extends Plugin {
         if (checkResult) {
           // Only perform work when checking is false
           if (!checking) {
-            openView(this.app as any, VIEW_TYPE_GRAPH_ANALYSIS, AnalysisView)
+            this.openOrRevealView(VIEW_TYPE_GRAPH_ANALYSIS, AnalysisView)
           }
           return true
         }
@@ -73,7 +74,7 @@ export default class GraphAnalysisPlugin extends Plugin {
             .length === 0
         if (notOpen) {
           if (!checking) {
-            openView(this.app as any, VIEW_TYPE_GRAPH_ANALYSIS_VISUAL, GraphVisualView)
+            this.openOrRevealView(VIEW_TYPE_GRAPH_ANALYSIS_VISUAL, GraphVisualView)
           }
           return true
         }
@@ -99,7 +100,7 @@ export default class GraphAnalysisPlugin extends Plugin {
       }
 
       await this.refreshGraph()
-      await openView(this.app as any, VIEW_TYPE_GRAPH_ANALYSIS, AnalysisView)
+      await this.openOrRevealView(VIEW_TYPE_GRAPH_ANALYSIS, AnalysisView)
     })
   }
 
@@ -115,8 +116,25 @@ export default class GraphAnalysisPlugin extends Plugin {
 
     if (view) return view
     else if (openIfNot) {
-      return await openView(this.app as any, VIEW_TYPE_GRAPH_ANALYSIS, AnalysisView)
+      return await this.openOrRevealView(VIEW_TYPE_GRAPH_ANALYSIS, AnalysisView)
     } else return null
+  }
+
+  private async openOrRevealView<T extends ItemView>(
+    viewType: string,
+    ViewClass: new (...args: any[]) => T,
+    side: 'left' | 'right' = 'right'
+  ): Promise<T> {
+    for (const leaf of this.app.workspace.getLeavesOfType(viewType)) {
+      if (leaf.view instanceof ViewClass) return leaf.view as T
+      await leaf.setViewState({ type: 'empty' })
+      break
+    }
+    const leaf = side === 'right'
+      ? this.app.workspace.getRightLeaf(false)
+      : this.app.workspace.getLeftLeaf(false)
+    await leaf.setViewState({ type: viewType, active: true })
+    return leaf.view as T
   }
 
   async refreshGraph() {
