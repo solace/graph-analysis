@@ -34,9 +34,17 @@
 <div
   class="CC-sentence"
   bind:this={el}
+  role="link"
+  tabindex="0"
   on:click={async (e) => {
     await openOrSwitch(app, sourcePath, e)
     jumpToSelection(app, line, sentence.join(''))
+  }}
+  on:keydown={async (e) => {
+    if (e.key === 'Enter') {
+      await openOrSwitch(app, sourcePath, e)
+      jumpToSelection(app, line, sentence.join(''))
+    }
   }}
 />
 

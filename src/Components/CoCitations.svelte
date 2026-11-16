@@ -163,14 +163,22 @@
                                      {classExt(node.to)}
                                      {node.linked ? LINKED : NOT_LINKED}
                                      {NODE}"
+                      role="link"
+                      tabindex="0"
                       on:click={async (e) => {
                         if (node.to[0] !== '#') {
+                          await openOrSwitch(app, node.to, e)
+                        }
+                      }}
+                      on:keydown={async (e) => {
+                        if (e.key === 'Enter' && node.to[0] !== '#') {
                           await openOrSwitch(app, node.to, e)
                         }
                       }}
                       on:contextmenu={(e) => openMenu(e, app)}
                       on:mouseover={(e) =>
                         hoverPreview(e, view, dropPath(node.to))}
+                      on:focus={(e) => hoverPreview(e, view, dropPath(node.to))}
                     >
                       {#if node.to[0] === '#'}
                         <!-- svelte-ignore a11y-missing-attribute -->
@@ -204,11 +212,17 @@
                     <div class="CC-item">
                       <span
                         class="internal-link {NODE}"
+                        role="link"
+                        tabindex="0"
                         on:click={async (e) =>
                           await openOrSwitch(app, coCite.source, e)}
+                        on:keydown={async (e) => {
+                          if (e.key === 'Enter') await openOrSwitch(app, coCite.source, e)
+                        }}
                         on:contextmenu={(e) => openMenu(e, app)}
                         on:mouseover={(e) =>
                           hoverPreview(e, view, dropPath(coCite.source))}
+                        on:focus={(e) => hoverPreview(e, view, dropPath(coCite.source))}
                       >
                         {presentPath(coCite.source)}
                       </span>

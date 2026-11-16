@@ -610,10 +610,8 @@
 
 <style>
   .GA-canvas-container {
-    position: relative;
-    width: 100%;
-    flex: 1 1 0;
-    min-height: 0;
+    position: absolute;
+    inset: 0;
   }
 
   canvas {

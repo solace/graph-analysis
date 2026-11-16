@@ -28,6 +28,33 @@
   export let visibleData: any[]
   export let promiseSortedResults: Promise<any[]>
   export let page: number
+
+  function activateOnKey(e: KeyboardEvent, fn: () => void) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn() }
+  }
+
+  function resetResults() {
+    blockSwitch = true
+    newBatch = []
+    visibleData = []
+    promiseSortedResults = null
+    page = 0
+  }
+
+  function toggleFrozen() {
+    frozen = !frozen
+    if (!frozen && !currSubtypeInfo.global) {
+      resetResults()
+      setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
+    } else if (!frozen && currSubtypeInfo.global) {
+      blockSwitch = true
+      newBatch = []
+      setTimeout(() => {
+        blockSwitch = false
+        currFile = app.workspace.getActiveFile()
+      }, 100)
+    }
+  }
 </script>
 
 <span class="GA-Subtype-Options">
@@ -36,17 +63,11 @@
   {#if noZero !== undefined}
     <span
       class="GA-Option-span"
+      role="button"
+      tabindex="0"
       aria-label={noZero ? 'Show Zeros' : 'Hide Zeros'}
-      on:click={() => {
-        noZero = !noZero
-        if (!frozen) {
-          blockSwitch = true
-          newBatch = []
-          visibleData = []
-          promiseSortedResults = null
-          page = 0
-        }
-      }}
+      on:click={() => { noZero = !noZero; if (!frozen) resetResults() }}
+      on:keydown={(e) => activateOnKey(e, () => { noZero = !noZero; if (!frozen) resetResults() })}
     >
       <span class="icon">
         {#if noZero}
@@ -60,17 +81,11 @@
   {#if ascOrder !== undefined}
     <span
       class="GA-Option-span"
+      role="button"
+      tabindex="0"
       aria-label={ascOrder ? 'Ascending' : 'Descending'}
-      on:click={() => {
-        ascOrder = !ascOrder
-        if (!frozen) {
-          blockSwitch = true
-          newBatch = []
-          visibleData = []
-          promiseSortedResults = null
-          page = 0
-        }
-      }}
+      on:click={() => { ascOrder = !ascOrder; if (!frozen) resetResults() }}
+      on:keydown={(e) => activateOnKey(e, () => { ascOrder = !ascOrder; if (!frozen) resetResults() })}
     >
       <span class="icon">
         {#if ascOrder}
@@ -84,26 +99,11 @@
   {#if frozen !== undefined}
     <span
       class="GA-Option-span"
+      role="button"
+      tabindex="0"
       aria-label={frozen ? `Frozen on: ${currFile.basename}` : 'Unfrozen'}
-      on:click={() => {
-        frozen = !frozen
-        if (!frozen && !currSubtypeInfo.global) {
-          blockSwitch = true
-          newBatch = []
-          visibleData = []
-          promiseSortedResults = null
-          page = 0
-
-          setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
-        } else if (!frozen && currSubtypeInfo.global) {
-          blockSwitch = true
-          setTimeout(() => {
-            blockSwitch = false
-            currFile = app.workspace.getActiveFile()
-          }, 100)
-          newBatch = []
-        }
-      }}
+      on:click={() => toggleFrozen()}
+      on:keydown={(e) => activateOnKey(e, toggleFrozen)}
     >
       <span class="icon">
         {#if frozen}
@@ -117,17 +117,11 @@
   {#if sortBy !== undefined}
     <span
       class="GA-Option-span"
+      role="button"
+      tabindex="0"
       aria-label="Sort By: {sortBy ? 'Authority' : 'Hub'}"
-      on:click={() => {
-        sortBy = !sortBy
-        if (!frozen) {
-          blockSwitch = true
-          newBatch = []
-          visibleData = []
-          promiseSortedResults = null
-          page = 0
-        }
-      }}
+      on:click={() => { sortBy = !sortBy; if (!frozen) resetResults() }}
+      on:keydown={(e) => activateOnKey(e, () => { sortBy = !sortBy; if (!frozen) resetResults() })}
     >
       <span class="icon">
         {#if sortBy}
@@ -140,11 +134,11 @@
   {/if}
   <span
     class="GA-Option-span"
+    role="button"
+    tabindex="0"
     aria-label="Refresh Index"
-    on:click={async () => {
-      await plugin.refreshGraph()
-      await view.draw(currSubtypeInfo.subtype)
-    }}
+    on:click={async () => { await plugin.refreshGraph(); await view.draw(currSubtypeInfo.subtype) }}
+    on:keydown={async (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); await plugin.refreshGraph(); await view.draw(currSubtypeInfo.subtype) } }}
   >
     <span class="icon">
       <IoMdRefresh />

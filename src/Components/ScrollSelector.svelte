@@ -16,6 +16,9 @@
       on:mouseover={function () {
         this.ariaLabel = '`Shift + Scroll` to scroll sideways'
       }}
+      on:focus={function () {
+        this.ariaLabel = '`Shift + Scroll` to scroll sideways'
+      }}
     >
       <div class="container">
         {#each ANALYSIS_TYPES as sub}

@@ -7,6 +7,9 @@ import type {
   NeighbourhoodResult,
   NodeData,
   ResultMap,
+  SynthesisNodeData,
+  SynthesisResult,
+  SynthesisZone,
   VisualEdgeType,
 } from 'src/Interfaces'
 
@@ -238,4 +241,97 @@ export async function getNeighbourhood(
   }
 
   return { neighbourhood: { nodes, edges }, ccMap }
+}
+
+export async function getSynthesisData(
+  plugin: GraphAnalysisPlugin,
+  pathA: string,
+  pathB: string
+): Promise<SynthesisResult> {
+  const [resA, resB] = await Promise.all([
+    getNeighbourhood(plugin, pathA),
+    getNeighbourhood(plugin, pathB),
+  ])
+
+  const { app } = plugin
+
+  const setA = new Set(resA.neighbourhood.nodes.map(n => n.path))
+  const setB = new Set(resB.neighbourhood.nodes.map(n => n.path))
+
+  // Remove focal notes from each other's neighbour sets before zone assignment
+  setA.delete(pathB)
+  setB.delete(pathA)
+
+  const zone = (path: string): SynthesisZone => {
+    if (path === pathA) return 'focal-a'
+    if (path === pathB) return 'focal-b'
+    if (setA.has(path) && setB.has(path)) return 'shared'
+    if (setA.has(path)) return 'a-only'
+    return 'b-only'
+  }
+
+  const toSynthNode = (n: NodeData): SynthesisNodeData => ({
+    path: n.path,
+    zone: zone(n.path),
+    edgeType: n.edgeType,
+    inDegree: n.inDegree,
+    outDegree: n.outDegree,
+    fileSize: n.fileSize,
+  })
+
+  // Merge nodes from both results, deduplicating by path.
+  // Shared nodes arrive from resA; resB adds only the new ones.
+  const nodeMap = new Map<string, SynthesisNodeData>()
+  for (const n of [
+    ...resA.neighbourhood.nodes,
+    ...resB.neighbourhood.nodes,
+  ]) {
+    if (!nodeMap.has(n.path)) nodeMap.set(n.path, toSynthNode(n))
+  }
+  // Always include both focal notes (even if excluded from their own neighbourhood)
+  if (!nodeMap.has(pathA)) {
+    const f = app.vault.getAbstractFileByPath(pathA)
+    nodeMap.set(pathA, {
+      path: pathA, zone: 'focal-a', edgeType: 'direct',
+      inDegree: plugin.g.hasNode(pathA) ? plugin.g.inDegree(pathA) : 0,
+      outDegree: plugin.g.hasNode(pathA) ? plugin.g.outDegree(pathA) : 0,
+      fileSize: f instanceof TFile ? f.stat.size : 0,
+    })
+  }
+  if (!nodeMap.has(pathB)) {
+    const f = app.vault.getAbstractFileByPath(pathB)
+    nodeMap.set(pathB, {
+      path: pathB, zone: 'focal-b', edgeType: 'direct',
+      inDegree: plugin.g.hasNode(pathB) ? plugin.g.inDegree(pathB) : 0,
+      outDegree: plugin.g.hasNode(pathB) ? plugin.g.outDegree(pathB) : 0,
+      fileSize: f instanceof TFile ? f.stat.size : 0,
+    })
+  }
+
+  // Merge edges, deduplicating by source+target+type
+  const edgeKey = (e: EdgeData) => `${e.source}→${e.target}:${e.type}`
+  const edgeMap = new Map<string, EdgeData>()
+  for (const e of [
+    ...resA.neighbourhood.edges,
+    ...resB.neighbourhood.edges,
+  ]) {
+    const k = edgeKey(e)
+    if (!edgeMap.has(k)) edgeMap.set(k, e)
+  }
+
+  // Shared gap candidates: paths present in both AA result sets
+  const [gapsA, gapsB] = await Promise.all([
+    getGapCandidates(plugin, pathA, resA.ccMap),
+    getGapCandidates(plugin, pathB, resB.ccMap),
+  ])
+  const gapsBPaths = new Set(gapsB.map(g => g.path))
+  const sharedGaps = gapsA.filter(g => gapsBPaths.has(g.path))
+
+  return {
+    nodes: [...nodeMap.values()],
+    edges: [...edgeMap.values()],
+    gaps: sharedGaps,
+    pathA,
+    pathB,
+  }
 }

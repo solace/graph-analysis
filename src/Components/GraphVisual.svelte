@@ -9,6 +9,7 @@
   export let focalPath: string
   export let hubThresholdDefault = 20
   export let onNodeClick: ((path: string, context: string) => void) | null = null
+  export let onCompare: (() => void) | null = null
 
   let showDirect = true
   let showCoCitation = true
@@ -59,6 +60,7 @@
     bind:hubThreshold
     bind:hop2MinDegree
     bind:hop2NodeCap
+    {onCompare}
     on:resetView={() => canvasRef?.resetView()}
   />
   <GraphCanvas
@@ -81,8 +83,7 @@
 
 <style>
   .GA-visual-wrapper {
-    display: flex;
-    flex-direction: column;
+    position: relative;
     width: 100%;
     height: 100%;
     overflow: hidden;

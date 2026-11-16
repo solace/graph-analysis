@@ -147,13 +147,17 @@
           {#if node.to !== currNode && node !== undefined}
             <div
               class="
-                {node.linked ? LINKED : NOT_LINKED} 
+                {node.linked ? LINKED : NOT_LINKED}
               {classExt(node.to)}"
+              role="link"
+              tabindex="0"
               on:click={async (e) => await openOrSwitch(app, node.to, e)}
+              on:keydown={async (e) => { if (e.key === 'Enter') await openOrSwitch(app, node.to, e) }}
             >
               <span
                 on:contextmenu={(e) => openMenu(e, app)}
                 on:mouseover={(e) => hoverPreview(e, viewEl, dropPath(node.to))}
+                on:focus={(e) => hoverPreview(e, viewEl, dropPath(node.to))}
               >
                 {#if node.linked}
                   <span class={ICON}>

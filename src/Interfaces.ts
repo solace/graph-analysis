@@ -122,6 +122,25 @@ export interface GapCandidate {
   outDegree: number
 }
 
+export type SynthesisZone = 'focal-a' | 'focal-b' | 'a-only' | 'b-only' | 'shared'
+
+export interface SynthesisNodeData {
+  path: string
+  zone: SynthesisZone
+  edgeType: VisualEdgeType
+  inDegree: number
+  outDegree: number
+  fileSize: number
+}
+
+export interface SynthesisResult {
+  nodes: SynthesisNodeData[]
+  edges: EdgeData[]
+  gaps: GapCandidate[]
+  pathA: string
+  pathB: string
+}
+
 export interface ExclusionProp {
   key: string
   value: string

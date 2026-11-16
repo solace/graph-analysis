@@ -171,8 +171,12 @@
                     {classResolved(app, member)} 
                     {classExt(member)}
                       "
+                    tabindex="0"
+                    role="link"
                     on:click={async (e) => await openOrSwitch(app, member, e)}
+                    on:keydown={async (e) => { if (e.key === 'Enter') await openOrSwitch(app, member, e) }}
                     on:mouseover={(e) => hoverPreview(e, viewEl, member)}
+                    on:focus={(e) => hoverPreview(e, viewEl, member)}
                   >
                     {#if isLinked(resolvedLinks, comm.label, member, false)}
                       <span class={ICON}>

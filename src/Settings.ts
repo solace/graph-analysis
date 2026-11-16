@@ -112,118 +112,7 @@ export class SampleSettingTab extends PluginSettingTab {
         })
       )
 
-    new Setting(containerEl)
-      .setName('Exclusion Tags')
-      .setDesc(
-        "A comma-separated list of tags. Any note with any of these tags won't be included in the graph. Include the `#` in each tag"
-      )
-      .addText((tc) => {
-        tc.setValue(settings.exclusionTags.join(', '))
-        tc.inputEl.onblur = async () => {
-          const { value } = tc.inputEl
-          const splits = value.split(',').map((s) => s.trim())
-          if (value !== '' && !splits.every((t) => t.startsWith('#'))) {
-            new Notice("Every tag must start with '#'")
-            return
-          }
-          settings.exclusionTags = splits
-          await plugin.saveSettings()
-        }
-      })
-
-    new Setting(containerEl)
-      .setName('Exclusion Regex')
-      .setDesc(
-        createFragment((el) => {
-          el.createEl('p', {
-            text: "Regex to exclude values from analysis. If a file name matches this regex, it won't be added to the graph.",
-          })
-          const span = el.createSpan()
-          span.createSpan({ text: 'Default is ' })
-          span.createEl('code', { text: '(?:)' })
-          span.createSpan({ text: ' or ' })
-          span.createEl('code', { text: "''" })
-          span.createSpan({
-            text: ' (empty string). Either option will allow all notes through the filter (regular Graph Anlaysis behaviour).',
-          })
-
-          el.createEl('p', {
-            text: 'Remeber that the regex will be tested against the full file path of each note (not just the basename). So you may need to include "folders/" and ".md" for some regexes.',
-          })
-        })
-      )
-      .addText((textComp) => {
-        textComp.setValue(settings.exclusionRegex)
-        textComp.inputEl.onblur = async () => {
-          const value = textComp.getValue()
-          // Test if valid regex and save
-          try {
-            new RegExp(value)
-            settings.exclusionRegex = value
-            await plugin.saveSettings()
-            await this.plugin.refreshGraph()
-          } catch (e) {
-            // Invalid regex
-            new Notice(
-              `${value} is not a valid regular expression. Make sure you have closed all brackets, and escaped any characters where necessary.`
-            )
-          }
-        }
-      })
-
     containerEl.createEl('h3', { text: 'Visual Graph' })
-
-    new Setting(containerEl)
-      .setName('Exclusion Folders')
-      .setDesc(
-        'Comma-separated folder paths. Notes under these folders are excluded from the visual graph. E.g. dailies, templates/system'
-      )
-      .addText((tc) => {
-        tc.setValue(settings.exclusionFolders.join(', '))
-        tc.inputEl.style.width = '100%'
-        tc.inputEl.onblur = async () => {
-          const { value } = tc.inputEl
-          settings.exclusionFolders =
-            value === ''
-              ? []
-              : value
-                  .split(',')
-                  .map((s) => s.trim())
-                  .filter(Boolean)
-          await plugin.saveSettings()
-        }
-      })
-
-    new Setting(containerEl)
-      .setName('Exclusion Properties')
-      .setDesc(
-        'Comma-separated key:value pairs. Notes with matching frontmatter are excluded from the visual graph. E.g. type:moc, type:classification'
-      )
-      .addText((tc) => {
-        tc.setValue(
-          settings.exclusionProps.map((p) => `${p.key}:${p.value}`).join(', ')
-        )
-        tc.inputEl.style.width = '100%'
-        tc.inputEl.onblur = async () => {
-          const { value } = tc.inputEl
-          settings.exclusionProps =
-            value === ''
-              ? []
-              : (value
-                  .split(',')
-                  .map((s) => {
-                    const trimmed = s.trim()
-                    const colonIdx = trimmed.indexOf(':')
-                    if (colonIdx === -1) return null
-                    return {
-                      key: trimmed.slice(0, colonIdx).trim(),
-                      value: trimmed.slice(colonIdx + 1).trim(),
-                    }
-                  })
-                  .filter(Boolean) as ExclusionProp[])
-          await plugin.saveSettings()
-        }
-      })
 
     new Setting(containerEl)
       .setName('Gap Node Score Floor')
@@ -270,6 +159,111 @@ export class SampleSettingTab extends PluginSettingTab {
             await plugin.saveSettings()
           })
       )
+
+    containerEl.createEl('h3', { text: 'Exclusion Settings' })
+
+    new Setting(containerEl)
+      .setName('Exclusion Tags')
+      .setDesc(
+        "Comma-separated list of tags. Notes with any of these tags are excluded from all analyses. Include the # in each tag."
+      )
+      .addText((tc) => {
+        tc.setValue(settings.exclusionTags.join(', '))
+        tc.inputEl.style.width = '100%'
+        tc.inputEl.onblur = async () => {
+          const { value } = tc.inputEl
+          const splits = value.split(',').map((s) => s.trim()).filter(Boolean)
+          if (splits.length > 0 && !splits.every((t) => t.startsWith('#'))) {
+            new Notice("Every tag must start with '#'")
+            return
+          }
+          settings.exclusionTags = splits
+          await plugin.saveSettings()
+        }
+      })
+
+    new Setting(containerEl)
+      .setName('Exclusion Properties')
+      .setDesc(
+        'Comma-separated key:value pairs. Notes with matching frontmatter are excluded. E.g. type:moc, type:classification'
+      )
+      .addText((tc) => {
+        tc.setValue(
+          settings.exclusionProps.map((p) => `${p.key}:${p.value}`).join(', ')
+        )
+        tc.inputEl.style.width = '100%'
+        tc.inputEl.onblur = async () => {
+          const { value } = tc.inputEl
+          settings.exclusionProps =
+            value === ''
+              ? []
+              : (value
+                  .split(',')
+                  .map((s) => {
+                    const trimmed = s.trim()
+                    const colonIdx = trimmed.indexOf(':')
+                    if (colonIdx === -1) return null
+                    return {
+                      key: trimmed.slice(0, colonIdx).trim(),
+                      value: trimmed.slice(colonIdx + 1).trim(),
+                    }
+                  })
+                  .filter(Boolean) as ExclusionProp[])
+          await plugin.saveSettings()
+        }
+      })
+
+    new Setting(containerEl)
+      .setName('Exclusion Folders')
+      .setDesc(
+        'Comma-separated folder paths. Notes under these folders are excluded from all analyses. E.g. dailies, templates/system'
+      )
+      .addText((tc) => {
+        tc.setValue(settings.exclusionFolders.join(', '))
+        tc.inputEl.style.width = '100%'
+        tc.inputEl.onblur = async () => {
+          const { value } = tc.inputEl
+          settings.exclusionFolders =
+            value === ''
+              ? []
+              : value
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+          await plugin.saveSettings()
+        }
+      })
+
+    new Setting(containerEl)
+      .setName('Exclusion Regex')
+      .setDesc(
+        createFragment((el) => {
+          el.createEl('p', {
+            text: "Regular expression tested against each note's full file path. Matching notes are excluded from all analyses. Leave empty to include all notes.",
+          })
+          el.createEl('p', {
+            text: 'The path includes folders and the .md extension, e.g. "dailies/2024-01-01.md". Use ^ to anchor to the start of the path.',
+          })
+        })
+      )
+      .addTextArea((ta) => {
+        ta.setValue(settings.exclusionRegex)
+        ta.inputEl.rows = 4
+        ta.inputEl.style.width = '100%'
+        ta.inputEl.onblur = async () => {
+          const value = ta.getValue().trim()
+          try {
+            new RegExp(value)
+            settings.exclusionRegex = value
+            await plugin.saveSettings()
+            await this.plugin.refreshGraph()
+          } catch (e) {
+            new Notice(
+              `"${value}" is not a valid regular expression. Check for unclosed brackets or unescaped characters.`
+            )
+          }
+        }
+      })
 
     containerEl.createEl('h3', { text: 'Debugging Options' })
 

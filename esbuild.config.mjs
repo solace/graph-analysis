@@ -41,7 +41,6 @@ const context = await esbuild.context({
   plugins: [
     sveltePlugin({
       preprocess: sveltePreprocess(),
-      filterWarnings: (w) => !w.code.startsWith('a11y'),
       compilerOptions: { css: 'injected' },
     }),
   ],

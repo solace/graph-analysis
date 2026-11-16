@@ -172,8 +172,10 @@
                 aria-label={node.extra.map(presentPath).join('\n')}
                 aria-label-position="left"
                 on:click={async (e) => await openOrSwitch(app, node.to, e)}
+                on:keydown={async (e) => { if (e.key === 'Enter') await openOrSwitch(app, node.to, e) }}
                 on:contextmenu={(e) => openMenu(e, app)}
                 on:mouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
+                on:focus={(e) => hoverPreview(e, view, dropPath(node.to))}
               >
                 {#if node.linked}
                   <span class={ICON}>
