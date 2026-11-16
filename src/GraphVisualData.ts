@@ -18,26 +18,37 @@ interface NeighbourhoodBuildResult {
   ccMap: CoCitationMap
 }
 
-function isExcludedByFolder(path: string, exclusionFolders: string[]): boolean {
-  return exclusionFolders.some((f) =>
-    path.startsWith(f.replace(/\/$/, '') + '/')
-  )
-}
+function isExcluded(path: string, plugin: GraphAnalysisPlugin): boolean {
+  const { exclusionFolders, exclusionProps, exclusionRegex, exclusionTags } = plugin.settings
 
-function isExcludedByProp(
-  path: string,
-  plugin: GraphAnalysisPlugin
-): boolean {
-  const { exclusionProps } = plugin.settings
-  if (exclusionProps.length === 0) return false
-  const cache = plugin.app.metadataCache.getCache(path)
-  if (!cache?.frontmatter) return false
-  return exclusionProps.some(({ key, value }) => {
-    const fmVal = cache.frontmatter[key]
-    if (fmVal == null) return false
-    const vals = Array.isArray(fmVal) ? fmVal.map(String) : [String(fmVal)]
-    return vals.includes(value)
-  })
+  if (exclusionFolders.some((f) => path.startsWith(f.replace(/\/$/, '') + '/'))) return true
+
+  if (exclusionRegex !== '') {
+    try {
+      if (new RegExp(exclusionRegex, 'i').test(path)) return true
+    } catch { /* invalid regex — skip */ }
+  }
+
+  if (exclusionTags.length > 0 || exclusionProps.length > 0) {
+    const cache = plugin.app.metadataCache.getCache(path)
+    if (cache?.frontmatter) {
+      if (exclusionTags.length > 0) {
+        const rawTags: unknown = cache.frontmatter.tags ?? []
+        const tags = Array.isArray(rawTags) ? rawTags.map(String) : [String(rawTags)]
+        if (tags.some((t) => exclusionTags.includes(t))) return true
+      }
+      if (exclusionProps.length > 0) {
+        if (exclusionProps.some(({ key, value }) => {
+          const fmVal = cache.frontmatter[key]
+          if (fmVal == null) return false
+          const vals = Array.isArray(fmVal) ? fmVal.map(String) : [String(fmVal)]
+          return vals.includes(value)
+        })) return true
+      }
+    }
+  }
+
+  return false
 }
 
 // gapNodeFloor applies as a measure floor for Jaccard (0–1 range) and
@@ -52,17 +63,15 @@ export async function getGapCandidates(
   if (!plugin.g || !plugin.g.hasNode(focalPath)) return []
 
   const { app } = plugin
-  const { exclusionFolders, gapNodeFloor, gapNodeCount } = plugin.settings
+  const { gapNodeFloor, gapNodeCount } = plugin.settings
 
   const directNeighbours = new Set<string>([
     focalPath,
     ...plugin.g.neighbors(focalPath),
   ])
 
-  const isExcluded = (path: string) =>
-    directNeighbours.has(path) ||
-    isExcludedByFolder(path, exclusionFolders) ||
-    isExcludedByProp(path, plugin)
+  const isExcludedGap = (path: string) =>
+    directNeighbours.has(path) || isExcluded(path, plugin)
 
   if (plugin.settings.debugMode) console.time('[GA Visual] getGapCandidates')
 
@@ -73,7 +82,7 @@ export async function getGapCandidates(
   const candidates: GapCandidate[] = []
   for (const [path, { measure }] of Object.entries(aaResults)) {
     if (!isFinite(measure) || measure < gapNodeFloor) continue
-    if (isExcluded(path)) continue
+    if (isExcludedGap(path)) continue
 
     const abstractFile = app.vault.getAbstractFileByPath(path)
     candidates.push({
@@ -101,11 +110,6 @@ export function getHop2Nodes(
   if (!plugin.g || !plugin.g.hasNode(focalPath)) return { nodes: [], edges: [] }
 
   const { app } = plugin
-  const { exclusionFolders } = plugin.settings
-
-  const isExcluded = (path: string) =>
-    isExcludedByFolder(path, exclusionFolders) ||
-    isExcludedByProp(path, plugin)
 
   // candidateMap: path → { inDegree, outDegree, firstHop1Source }
   // Degree stored here and reused for NodeData to avoid double graph lookups.
@@ -115,7 +119,7 @@ export function getHop2Nodes(
   for (const hop1Path of hop1DirectSources) {
     for (const neighbour of plugin.g.neighbors(hop1Path)) {
       if (hop1Seen.has(neighbour)) continue
-      if (isExcluded(neighbour)) continue
+      if (isExcluded(neighbour, plugin)) continue
       if (candidateMap.has(neighbour)) continue
       const inDegree = plugin.g.hasNode(neighbour) ? plugin.g.inDegree(neighbour) : 0
       const outDegree = plugin.g.hasNode(neighbour) ? plugin.g.outDegree(neighbour) : 0
@@ -158,12 +162,8 @@ export async function getNeighbourhood(
   if (!plugin.g || !plugin.g.hasNode(focalPath)) return empty
 
   const { app } = plugin
-  const { exclusionFolders, gapNodeFloor, gapNodeCount } = plugin.settings
+  const { gapNodeFloor, gapNodeCount } = plugin.settings
   const { resolvedLinks } = app.metadataCache
-
-  const isExcluded = (path: string) =>
-    isExcludedByFolder(path, exclusionFolders) ||
-    isExcludedByProp(path, plugin)
 
   const getNodeData = (path: string, edgeType: VisualEdgeType): NodeData => {
     const abstractFile = app.vault.getAbstractFileByPath(path)
@@ -182,7 +182,7 @@ export async function getNeighbourhood(
 
   // Phase 1: direct wikilink neighbours (synchronous)
   for (const neighbour of plugin.g.neighbors(focalPath)) {
-    if (isExcluded(neighbour)) continue
+    if (isExcluded(neighbour, plugin)) continue
     if (!seen.has(neighbour)) {
       seen.add(neighbour)
       nodes.push(getNodeData(neighbour, 'direct'))
@@ -201,7 +201,7 @@ export async function getNeighbourhood(
     const jaccardResults = await (plugin.g.algs['Jaccard'](focalPath) as Promise<ResultMap>)
     const jaccardUnlinked = Object.entries(jaccardResults)
       .filter(([path, { measure }]) =>
-        isFinite(measure) && measure >= gapNodeFloor && !seen.has(path) && !isExcluded(path)
+        isFinite(measure) && measure >= gapNodeFloor && !seen.has(path) && !isExcluded(path, plugin)
       )
       .sort(([, a], [, b]) => b.measure - a.measure)
       .slice(0, gapNodeCount)
@@ -224,7 +224,7 @@ export async function getNeighbourhood(
     ccMap = await (plugin.g.algs['Co-Citations'](focalPath) as Promise<CoCitationMap>)
     const ccUnlinked = Object.entries(ccMap)
       .filter(([path, { measure }]) =>
-        isFinite(measure) && measure >= gapNodeFloor && !seen.has(path) && !isExcluded(path)
+        isFinite(measure) && measure >= gapNodeFloor && !seen.has(path) && !isExcluded(path, plugin)
       )
       .sort(([, a], [, b]) => b.measure - a.measure)
       .slice(0, gapNodeCount)
