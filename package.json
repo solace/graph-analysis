@@ -1,12 +1,14 @@
 {
   "name": "graph-analysis",
-  "version": "0.15.5",
+  "version": "1.0.0",
   "description": "Analyse your Obsidian graph",
   "main": "main.js",
   "type": "module",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "node esbuild.config.mjs production",
+    "version": "node version-bump.mjs && git add manifest.json versions.json",
+    "lint": "svelte-check",
     "release": "standard-version"
   },
   "standard-version": {

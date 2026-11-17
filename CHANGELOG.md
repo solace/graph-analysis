@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.0.0] — fork (2026-11-16)
+
+This version is a fork of [SkepticMystic/graph-analysis](https://github.com/SkepticMystic/graph-analysis) v0.15.4. All upstream analysis algorithms are unchanged.
+
+### Features
+
+* **Visual graph** — D3-force canvas showing the inferred reasoning neighbourhood of the active note, with four simultaneous edge types: direct wikilinks, Jaccard similarity, co-citation, and Adamic-Adar gap candidates
+* **Gap nodes** — dashed ghost nodes for algorithmically likely but absent connections; inner arc shows file development level; click opens the note and shows the top co-citation sentence
+* **Hub nodes** — amber ring on high-degree nodes above a configurable degree threshold
+* **Hop-depth toggle** — expand to 2-hop neighbourhood; hub threshold controls density at hop 2
+* **Two-note synthesis view** — overlay the neighbourhoods of two notes simultaneously; shared nodes appear in a centre zone, A-only and B-only nodes in flanking zones; triggered by right-clicking two files in the explorer or the ⊕ header button
+* **Exclusion settings panel** — consolidated section with all four exclusion mechanisms (tags, properties, folders, regex) in one place; applied consistently to both the analysis view graph index and the visual graph layer
+* **GitHub Actions CI** — build check on every push and pull request
+
+### Bug Fixes
+
+* Exclusion regex and exclusion tags were not applied to the visual graph layer (hop-2 candidates and gap candidates could slip through); now all four exclusion mechanisms are applied consistently
+* `new Menu(app)` — updated to `new Menu()` following Obsidian API change
+* Removed dependency on `obsidian-community-lib` (breaking v2.0.2 upgrade introduced module identity conflicts); all used functions are now inlined
+
 ### [0.15.4](https://github.com/SkepticMystic/graph-analysis/compare/0.15.3...0.15.4) (2022-01-31)
 
 ### [0.15.3](https://github.com/SkepticMystic/graph-analysis/compare/0.15.2...0.15.3) (2022-01-12)

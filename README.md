@@ -220,19 +220,46 @@ The controls panel sits above the canvas. Toggle it with **▾ Filters**.
 
 Scroll wheel zooms toward cursor. Drag empty space to pan. Drag a node to reposition it.
 
+### Two-note synthesis view
+
+The synthesis view overlays the inferred neighbourhoods of **two notes** simultaneously, showing what connects them.
+
+**Triggers:**
+- Select exactly 2 `.md` files in the file explorer, right-click → **Synthesis view**
+- Or click the **⊕** icon in the visual graph title bar and pick a second note from the file suggester
+
+**Zone layout:** nodes are separated into three horizontal zones:
+
+| Zone | Meaning |
+|------|---------|
+| **A-only** (left) | In Note A's neighbourhood but not B's |
+| **Shared** (centre) | In both neighbourhoods — highest synthesis signal |
+| **B-only** (right) | In Note B's neighbourhood but not A's |
+
+Both focal notes are pinned at opposite ends of the canvas. Shared gap candidates (Adamic-Adar candidates appearing in *both* notes' results) render in the centre zone with the same dashed ghost style as single-note gaps.
+
+A **← Back** header action returns to single-note view of the previously active note.
+
 ### Settings
 
 Under **Settings → Graph Analysis → Visual Graph**:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Exclusion Folders | _(empty)_ | Comma-separated paths. Notes in these folders are hidden from the graph. E.g. `dailies, templates/system` |
-| Exclusion Properties | _(empty)_ | Comma-separated `key:value` pairs matching frontmatter. E.g. `type:moc`. Array-valued YAML properties are supported. |
 | Gap Node Score Floor | 0.1 | Minimum score for unlinked Jaccard/co-citation neighbours and gap candidates. Higher values show fewer, stronger results. |
 | Gap Node Count | 10 | Maximum number of gap candidates and unlinked neighbours per algorithm (1–50). |
 | Hub Degree Threshold | 20 | Total degree (in + out) at or above which a node is rendered as a hub. |
 
-Changes to any Visual Graph setting redraw the open view immediately.
+Under **Settings → Graph Analysis → Exclusion Settings** (applies to both the analysis view and the visual graph):
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Exclusion Tags | _(empty)_ | Comma-separated frontmatter tags. Notes with any of these tags are hidden. E.g. `fleeting, inbox` |
+| Exclusion Properties | _(empty)_ | Comma-separated `key:value` pairs matching frontmatter. E.g. `type:moc`. Array-valued YAML properties are supported. |
+| Exclusion Folders | _(empty)_ | Comma-separated paths. Notes in these folders are hidden. E.g. `dailies, templates/system` |
+| Exclusion Regex | _(empty)_ | Regular expression tested against each note's full path (case-insensitive). Matching notes are hidden. |
+
+Changes to any setting redraw the open visual graph view immediately.
 
 ## Upstream Foundation & Credits
 
